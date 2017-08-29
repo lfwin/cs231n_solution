@@ -31,15 +31,28 @@ def softmax_loss_naive(W, X, y, reg):
   # regularization!                                                           #
   #############################################################################
   from IPython.core.debugger import Tracer
-  Tracer()()
+  #Tracer()()
   num_train, _ = X.shape
+  _, num_class = W.shape
   for i in xrange(num_train):
     scores = X[i].dot(W)
     scores -= np.max(scores)
     exp_scores = np.exp(scores)
-    prob = exp_scores/np.sum(exp_scores)
-    loss = loss + (-np.log(prob[y[i]])
-
+    sum_scores = np.sum(exp_scores)
+    prob = exp_scores/sum_scores
+    loss += (-np.log(prob[y[i]]))
+    for j in xrange(num_class):
+      if j == y[i]:
+        dW[:, y[i]] += -X[i] + prob[y[i]]*X[i]
+      else:
+        dW[:, j] += prob[j]*X[i]
+        
+  loss /= num_train
+  loss += reg * np.sum(W * W)
+  dW /= num_train # add by me 
+  dW += 2*reg*W # add by me 
+ 
+                   
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
@@ -63,7 +76,25 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  from IPython.core.debugger import Tracer
+  #Tracer()()    
+  num_train, _ = X.shape
+  _, num_class = W.shape
+  scores = X.dot(W)
+  scores -= np.expand_dims(np.max(scores, axis=1), axis=1)
+  exp_scores = np.exp(scores)
+  sum_scores = np.sum(exp_scores, axis=1)
+  prob = exp_scores/np.expand_dims(sum_scores, axis=1)
+  loss += np.sum(-np.log(prob[np.arange(num_train), y]))
+  #Tracer()()
+  prob[np.arange(num_train), y] -= 1
+  dW = X.T.dot(prob)
+
+  loss /= num_train
+  loss += reg * np.sum(W * W)
+  dW /= num_train # add by me 
+  dW += 2*reg*W # add by me 
+ 
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################

@@ -80,7 +80,6 @@ def softmax_loss_vectorized(W, X, y, reg):
   #Tracer()()    
   num_train, _ = X.shape
   _, num_class = W.shape
-  scores = X.dot(W)
   scores -= np.expand_dims(np.max(scores, axis=1), axis=1)
   exp_scores = np.exp(scores)
   sum_scores = np.sum(exp_scores, axis=1)

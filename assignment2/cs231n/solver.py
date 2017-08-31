@@ -179,6 +179,8 @@ class Solver(object):
         y_batch = self.y_train[batch_mask]
 
         # Compute loss and gradient
+        #from IPython.core.debugger import Tracer
+        #Tracer()()
         loss, grads = self.model.loss(X_batch, y_batch)
         self.loss_history.append(loss)
 

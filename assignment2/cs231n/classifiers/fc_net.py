@@ -280,6 +280,8 @@ class FullyConnectedNet(object):
               beta = self.params['beta{0}'.format(i)]
               H, cache['Bn{0}_cache'.format(i)] = batchnorm_forward(H, gamma, beta, self.bn_params[i])
             A, cache['A{0}_cache'.format(i)]  = relu_forward(H)
+            if self.use_dropout:
+                A, cache['dropout{0}_cache'.format(i)] = dropout_forward(A, self.dropout_param)
           else:
             #Tracer()()
             H, cache['H{0}_cache'.format(i)] = affine_forward(A, W, b)
@@ -289,6 +291,8 @@ class FullyConnectedNet(object):
                   beta = self.params['beta{0}'.format(i)]
                   H, cache['Bn{0}_cache'.format(i)] = batchnorm_forward(H, gamma, beta, self.bn_params[i])
                 A, cache['A{0}_cache'.format(i)]  = relu_forward(H)   
+                if self.use_dropout:
+                  A, cache['dropout{0}_cache'.format(i)] = dropout_forward(A, self.dropout_param)
         
         scores = H
         ############################################################################
@@ -321,9 +325,11 @@ class FullyConnectedNet(object):
           if i == self.num_layers-1:
             dA, dW, db = affine_backward(dscores, cache['H{0}_cache'.format(i)])
             grads['W{0}'.format(i)] = dW
-            grads['b{0}'.format(i)] = db
+            grads['b{0}'.format(i)] = db        
 
           else:
+            if self.use_dropout:
+              dA = dropout_backward(dA, cache['dropout{0}_cache'.format(i)])  
             dH = relu_backward(dA, cache['A{0}_cache'.format(i)])
             if self.use_batchnorm:
               dH, dgamma, dbeta = batchnorm_backward(dH, cache['Bn{0}_cache'.format(i)])

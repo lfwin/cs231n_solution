@@ -34,7 +34,9 @@ def rnn_step_forward(x, prev_h, Wx, Wh, b):
     # hidden state and any values you need for the backward pass in the next_h   #
     # and cache variables respectively.                                          #
     ##############################################################################
-    pass
+    except_b = x.dot(Wx) + prev_h.dot(Wh)
+    next_h = np.tanh(except_b + b)
+    cache = (x, prev_h, Wx, Wh, next_h)
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -63,7 +65,17 @@ def rnn_step_backward(dnext_h, cache):
     # HINT: For the tanh function, you can compute the local derivative in terms #
     # of the output value from tanh.                                             #
     ##############################################################################
-    pass
+    x, prev_h, Wx, Wh, next_h = cache
+    from IPython.core.debugger import Tracer
+    
+    dpre_a = dnext_h*(1 - np.square(next_h))
+    dx = dpre_a.dot(Wx.T)
+    dWx = x.T.dot(dpre_a)
+    #Tracer()()
+    dprev_h = dpre_a.dot(Wh.T)
+    dWh = prev_h.T.dot(dpre_a)
+    #Tracer()()
+    db = np.sum(dpre_a, axis = 0)
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -94,7 +106,21 @@ def rnn_forward(x, h0, Wx, Wh, b):
     # input data. You should use the rnn_step_forward function that you defined  #
     # above. You can use a for loop to help compute the forward pass.            #
     ##############################################################################
-    pass
+    N, T, D = x.shape
+    _, H = h0.shape
+    next_h = h0
+    cache = []
+    tmp_cache = ()
+    h = np.zeros((N, T, H))
+    from IPython.core.debugger import Tracer
+    #Tracer()()
+    for t in xrange(T):
+      prev_h = next_h
+      next_h, tmp_cache = rnn_step_forward(x[:, t, :], prev_h, Wx, Wh, b)
+      h[:, t, :] = next_h
+      cache.append(tmp_cache)
+    
+    cache.append([N, T, D, H])
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -121,7 +147,25 @@ def rnn_backward(dh, cache):
     # sequence of data. You should use the rnn_step_backward function that you   #
     # defined above. You can use a for loop to help compute the backward pass.   #
     ##############################################################################
-    pass
+    from IPython.core.debugger import Tracer
+    N, T, D, H = cache[-1]
+    
+    del cache[-1]
+    dx = np.zeros((N, T, D))
+    dh0 = np.zeros((N, H))
+    dWx = np.zeros((D, H))
+    dWh = np.zeros((H, H))
+    db = np.zeros((H,))
+    dnext_h = dh
+    
+    for t in reversed(xrange(T)):
+      #Tracer()()
+      dx_t, dh0_t, dWx_t, dWh_t, db_t = rnn_step_backward(dnext_h[:, t, :]+dh0, cache[t])
+      dx[:, t, :] = dx_t
+      dh0 = dh0_t 
+      dWx += dWx_t
+      dWh += dWh_t
+      db += db_t
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################

@@ -141,14 +141,22 @@ class CaptioningRNN(object):
         
         h0 = features.dot(W_proj) + b_proj # (1)
         x, wef_cache = word_embedding_forward(captions_in, W_embed) # (2)
-        h, rnn_cache = rnn_forward(x, h0, Wx, Wh, b) # (3)
+        
+        if self.cell_type == "rnn":
+          h, rnn_cache = rnn_forward(x, h0, Wx, Wh, b) # (3)
+        elif self.cell_type=='lstm':
+          h, lstm_cache = lstm_forward(x, h0, Wx, Wh, b)
         score, taf_cache = temporal_affine_forward(h, W_vocab, b_vocab) # (4)
         loss, dx = temporal_softmax_loss(score, captions_out, mask, verbose=False) # (5)
         
         dh, dW_vocab, db_vocab = temporal_affine_backward(dx, taf_cache) # (4)
         grads['W_vocab'] = dW_vocab
         grads['b_vocab'] = db_vocab 
-        dx, dh0, dWx, dWh, db = rnn_backward(dh, rnn_cache) # (3)
+        
+        if self.cell_type == "rnn":
+          dx, dh0, dWx, dWh, db = rnn_backward(dh, rnn_cache) # (3)
+        elif self.cell_type=='lstm':
+          dx, dh0, dWx, dWh, db = lstm_backward(dh, lstm_cache)
         grads['Wx'] = dWx
         grads['Wh'] = dWh   
         grads['b'] = db   
@@ -218,20 +226,43 @@ class CaptioningRNN(object):
         # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
         # a loop.                                                                 #
         ###########################################################################
+       
         from IPython.core.debugger import Tracer
         
         h0 = features.dot(W_proj) + b_proj # (1)
         prev_h = h0
         current_word = self._start
+        prev_c = np.zeros_like(h0)
 
         for i in range(max_length):
           x, _ = word_embedding_forward(current_word, W_embed)
-          current_h, _ = rnn_step_forward(x, prev_h, Wx, Wh, b)
+          
+          if self.cell_type == "rnn":
+            current_h, _ = rnn_step_forward(x, prev_h, Wx, Wh, b)
+          elif self.cell_type=='lstm':
+            current_h, current_c, cache = lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b)
+            prev_c = current_c
           prev_h = current_h
           scores = np.dot(current_h, W_vocab) + b_vocab
           #Tracer()()
           captions[:, i] = np.argmax(scores, axis=1)
           current_word = captions[:, i]
+        """
+        current_h = features.dot(W_proj) + b_proj
+        current_c = np.zeros_like(current_h)
+        current_words = np.zeros(N, dtype=int)
+        current_words.fill(self._start)
+
+        for step in range(max_length):
+            embedded_words = W_embed[current_words,:]
+            if self.cell_type=='rnn':
+                current_h, cache = rnn_step_forward(embedded_words, current_h, Wx, Wh, b)
+            elif self.cell_type=='lstm':
+                current_h, current_c, cache = lstm_step_forward(embedded_words, current_h, current_c, Wx, Wh, b)
+            scores = np.dot(current_h, W_vocab) + b_vocab
+            captions[:, step] = np.argmax(scores, axis=1)
+            current_words = captions[:, step]
+         """
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
